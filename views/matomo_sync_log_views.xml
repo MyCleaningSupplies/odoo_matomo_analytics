@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="matomo_sync_log_view_tree" model="ir.ui.view">
+        <field name="name">matomo.sync.log.tree</field>
+        <field name="model">matomo.sync.log</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="instance_id" />
+                <field name="trigger" />
+                <field name="state" />
+                <field name="warning_count" />
+                <field name="date_from" />
+                <field name="date_to" />
+                <field name="started_at" />
+                <field name="finished_at" />
+                <field name="imported_days" />
+                <field name="imported_records" />
+            </list>
+        </field>
+    </record>
+
+    <record id="matomo_sync_log_view_form" model="ir.ui.view">
+        <field name="name">matomo.sync.log.form</field>
+        <field name="model">matomo.sync.log</field>
+        <field name="arch" type="xml">
+            <form string="Matomo Sync Log">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1" />
+                            <field name="instance_id" readonly="1" />
+                            <field name="company_id" readonly="1" groups="base.group_multi_company" />
+                            <field name="trigger" readonly="1" />
+                            <field name="state" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="date_from" readonly="1" />
+                            <field name="date_to" readonly="1" />
+                            <field name="started_at" readonly="1" />
+                            <field name="finished_at" readonly="1" />
+                            <field name="imported_days" readonly="1" />
+                            <field name="imported_records" readonly="1" />
+                            <field name="warning_count" readonly="1" />
+                        </group>
+                    </group>
+                    <group string="Imported Records">
+                        <group>
+                            <field name="daily_records" readonly="1" />
+                            <field name="channel_records" readonly="1" />
+                            <field name="country_records" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="referrer_records" readonly="1" />
+                            <field name="page_records" readonly="1" />
+                            <field name="goal_records" readonly="1" />
+                        </group>
+                    </group>
+                    <group string="Message">
+                        <field name="message" readonly="1" nolabel="1" />
+                    </group>
+                    <group string="Warnings" invisible="not warning_count">
+                        <field name="warning_details" readonly="1" nolabel="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="matomo_sync_log_search_view" model="ir.ui.view">
+        <field name="name">matomo.sync.log.search</field>
+        <field name="model">matomo.sync.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="instance_id" />
+                <field name="state" />
+                <field name="trigger" />
+                <field name="date_from" />
+                <filter name="filter_partial" string="Partial" domain="[('state', '=', 'partial')]" />
+                <filter name="filter_with_warnings" string="Warnings" domain="[('warning_count', '>', 0)]" />
+                <filter name="filter_failed" string="Failed" domain="[('state', '=', 'failed')]" />
+                <filter name="filter_success" string="Success" domain="[('state', '=', 'success')]" />
+            </search>
+        </field>
+    </record>
+
+    <record id="matomo_sync_log_action" model="ir.actions.act_window">
+        <field name="name">Sync Logs</field>
+        <field name="res_model">matomo.sync.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="matomo_sync_log_search_view" />
+    </record>
+</odoo>

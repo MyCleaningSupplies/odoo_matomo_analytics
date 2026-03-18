@@ -1,0 +1,23 @@
+{
+    "name": "Matomo Analytics",
+    "summary": "Stored Matomo analytics reporting inside Odoo",
+    "version": "18.0.1.0.0",
+    "author": "OpenAI",
+    "website": "https://www.onestein.eu",
+    "category": "Website/Analytics",
+    "license": "AGPL-3",
+    "depends": ["base"],
+    "post_init_hook": "post_init_hook",
+    "data": [
+        "security/matomo_analytics_security.xml",
+        "security/ir.model.access.csv",
+        "data/ir_cron_data.xml",
+        "views/matomo_instance_views.xml",
+        "views/matomo_sync_log_views.xml",
+        "views/matomo_metric_views.xml",
+        "views/matomo_dashboard_views.xml",
+        "views/menuitems.xml",
+    ],
+    "installable": True,
+    "application": True,
+}

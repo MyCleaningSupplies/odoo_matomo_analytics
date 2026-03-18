@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="matomo_instance_view_tree" model="ir.ui.view">
+        <field name="name">matomo.instance.tree</field>
+        <field name="model">matomo.instance</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="company_id" groups="base.group_multi_company" />
+                <field name="base_url" />
+                <field name="site_id" />
+                <field name="last_tested_on" />
+                <field name="last_successful_sync_at" />
+                <field name="last_sync_state" />
+            </list>
+        </field>
+    </record>
+
+    <record id="matomo_instance_view_form" model="ir.ui.view">
+        <field name="name">matomo.instance.form</field>
+        <field name="model">matomo.instance</field>
+        <field name="arch" type="xml">
+            <form string="Matomo Connection">
+                <header>
+                    <button name="action_test_connection" type="object" string="Test Connection" class="btn-secondary" />
+                    <button name="action_sync_now" type="object" string="Sync Now" class="btn-primary" />
+                    <button name="action_open_dashboard" type="object" string="Open Dashboard" />
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_sync_logs" type="object" class="oe_stat_button" icon="fa-refresh">
+                            <field name="sync_log_count" string="Sync Logs" widget="statinfo" />
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Connection">
+                            <field name="active" />
+                            <field name="company_id" groups="base.group_multi_company" />
+                            <field name="base_url" placeholder="https://analytics.example.com" />
+                            <field name="site_id" />
+                            <field name="api_token" password="True" groups="matomo_analytics.group_matomo_manager" />
+                        </group>
+                        <group string="Sync">
+                            <field name="sync_window_days" />
+                            <field name="page_limit" />
+                            <field name="last_tested_on" readonly="1" />
+                            <field name="last_sync_started_at" readonly="1" />
+                            <field name="last_successful_sync_at" readonly="1" />
+                            <field name="last_sync_state" readonly="1" />
+                        </group>
+                    </group>
+                    <group string="Last Sync Result">
+                        <field name="last_sync_message" readonly="1" nolabel="1" placeholder="No sync has run yet." />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="matomo_instance_action" model="ir.actions.act_window">
+        <field name="name">Matomo Connections</field>
+        <field name="res_model">matomo.instance</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

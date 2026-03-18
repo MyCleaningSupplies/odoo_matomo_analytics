@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="module_category_matomo_analytics" model="ir.module.category">
+        <field name="name">Matomo Analytics</field>
+        <field name="sequence">260</field>
+    </record>
+
+    <record id="group_matomo_viewer" model="res.groups">
+        <field name="name">Viewer</field>
+        <field name="category_id" ref="matomo_analytics.module_category_matomo_analytics" />
+    </record>
+
+    <record id="group_matomo_manager" model="res.groups">
+        <field name="name">Manager</field>
+        <field name="category_id" ref="matomo_analytics.module_category_matomo_analytics" />
+        <field name="implied_ids" eval="[(4, ref('matomo_analytics.group_matomo_viewer'))]" />
+    </record>
+
+    <record id="matomo_instance_company_rule" model="ir.rule">
+        <field name="name">Matomo Instance company rule</field>
+        <field name="model_id" ref="model_matomo_instance" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_sync_log_company_rule" model="ir.rule">
+        <field name="name">Matomo Sync Log company rule</field>
+        <field name="model_id" ref="model_matomo_sync_log" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_daily_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Daily Metric company rule</field>
+        <field name="model_id" ref="model_matomo_daily_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_channel_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Channel Metric company rule</field>
+        <field name="model_id" ref="model_matomo_channel_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_country_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Country Metric company rule</field>
+        <field name="model_id" ref="model_matomo_country_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_referrer_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Referrer Metric company rule</field>
+        <field name="model_id" ref="model_matomo_referrer_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_page_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Page Metric company rule</field>
+        <field name="model_id" ref="model_matomo_page_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+
+    <record id="matomo_goal_metric_company_rule" model="ir.rule">
+        <field name="name">Matomo Goal Metric company rule</field>
+        <field name="model_id" ref="model_matomo_goal_metric" />
+        <field name="global" eval="True" />
+        <field name="domain_force">[
+            '|',
+            ('company_id', '=', False),
+            ('company_id', 'in', company_ids)
+        ]</field>
+    </record>
+</odoo>

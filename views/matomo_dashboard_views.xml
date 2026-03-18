@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="matomo_dashboard_view_form" model="ir.ui.view">
+        <field name="name">matomo.analytics.dashboard.form</field>
+        <field name="model">matomo.analytics.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Matomo Overview">
+                <header>
+                    <button name="action_refresh" type="object" string="Refresh" class="btn-primary" />
+                    <button name="action_sync_now" type="object" string="Sync Now" groups="matomo_analytics.group_matomo_manager" />
+                    <button name="action_open_traffic_report" type="object" string="Traffic" />
+                    <button name="action_open_content_report" type="object" string="Content" />
+                    <button name="action_open_conversion_report" type="object" string="Conversions" />
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Filters">
+                            <field name="instance_id" options="{'no_create': True}" />
+                            <field name="date_from" />
+                            <field name="date_to" />
+                            <field name="comparison_enabled" />
+                            <field name="compare_date_from" invisible="not comparison_enabled" />
+                            <field name="compare_date_to" invisible="not comparison_enabled" />
+                        </group>
+                        <group string="Sync Status">
+                            <field name="selected_range_label" readonly="1" />
+                            <field name="compare_range_label" readonly="1" invisible="not comparison_enabled" />
+                            <field name="last_successful_sync_at" readonly="1" />
+                        </group>
+                    </group>
+                    <group string="Overview KPIs">
+                        <group>
+                            <field name="total_visitors" readonly="1" />
+                            <field name="total_sessions" readonly="1" />
+                            <field name="total_conversions" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="bounce_rate" readonly="1" />
+                            <field name="top_channel" readonly="1" />
+                        </group>
+                    </group>
+                    <group string="Comparison" invisible="not comparison_enabled">
+                        <group>
+                            <field name="compare_visitors" readonly="1" />
+                            <field name="compare_sessions" readonly="1" />
+                            <field name="compare_conversions" readonly="1" />
+                            <field name="compare_bounce_rate" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="visitors_delta" readonly="1" />
+                            <field name="sessions_delta" readonly="1" />
+                            <field name="conversions_delta" readonly="1" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="matomo_dashboard_server_action" model="ir.actions.server">
+        <field name="name">Matomo Overview</field>
+        <field name="model_id" ref="model_matomo_analytics_dashboard" />
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_dashboard()</field>
+    </record>
+</odoo>

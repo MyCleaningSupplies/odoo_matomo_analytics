@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <menuitem id="menu_matomo_root" name="Matomo Analytics" sequence="10" groups="matomo_analytics.group_matomo_viewer" web_icon="matomo_analytics,static/description/icon.svg" />
+
+    <menuitem id="menu_matomo_dashboard" name="Overview" parent="menu_matomo_root" action="matomo_dashboard_server_action" sequence="10" groups="matomo_analytics.group_matomo_viewer" />
+
+    <menuitem id="menu_matomo_reporting_root" name="Reporting" parent="menu_matomo_root" sequence="20" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_daily_metric" name="Daily Trend" parent="menu_matomo_reporting_root" action="matomo_daily_metric_action" sequence="10" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_channel_metric" name="Traffic Channels" parent="menu_matomo_reporting_root" action="matomo_channel_metric_action" sequence="20" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_country_metric" name="Traffic Countries" parent="menu_matomo_reporting_root" action="matomo_country_metric_action" sequence="30" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_referrer_metric" name="Traffic Referrers" parent="menu_matomo_reporting_root" action="matomo_referrer_metric_action" sequence="40" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_page_metric" name="Content" parent="menu_matomo_reporting_root" action="matomo_page_metric_action" sequence="50" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_goal_metric" name="Conversions" parent="menu_matomo_reporting_root" action="matomo_goal_metric_action" sequence="60" groups="matomo_analytics.group_matomo_viewer" />
+
+    <menuitem id="menu_matomo_configuration_root" name="Configuration" parent="menu_matomo_root" sequence="90" groups="matomo_analytics.group_matomo_manager" />
+    <menuitem id="menu_matomo_instances" name="Connections" parent="menu_matomo_configuration_root" action="matomo_instance_action" sequence="10" groups="matomo_analytics.group_matomo_manager" />
+    <menuitem id="menu_matomo_sync_logs" name="Sync Logs" parent="menu_matomo_configuration_root" action="matomo_sync_log_action" sequence="20" groups="matomo_analytics.group_matomo_manager" />
+</odoo>
