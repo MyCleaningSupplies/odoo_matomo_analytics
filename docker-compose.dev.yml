@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-matomo_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odoo}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo} -d ${POSTGRES_DB:-matomo_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  odoo:
+    image: odoo:18.0
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ODOO_HTTP_PORT:-8069}:8069"
+      - "${ODOO_LONGPOLL_PORT:-8072}:8072"
+    volumes:
+      - .:/mnt/extra-addons/matomo_analytics
+      - odoo-data:/var/lib/odoo
+    command:
+      - odoo
+      - --database=${ODOO_DB:-matomo_dev}
+      - --db_host=db
+      - --db_port=5432
+      - --db_user=${POSTGRES_USER:-odoo}
+      - --db_password=${POSTGRES_PASSWORD:-odoo}
+      - --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+      - --without-demo=all
+      - --dev=reload,qweb,xml
+      - --http-port=8069
+      - --longpolling-port=8072
+    tty: true
+    stdin_open: true
+
+volumes:
+  postgres-data:
+  odoo-data:
