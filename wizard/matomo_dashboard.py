@@ -25,12 +25,15 @@ class MatomoAnalyticsDashboard(models.TransientModel):
     compare_date_to = fields.Date()
     selected_range_label = fields.Char(compute="_compute_metrics")
     compare_range_label = fields.Char(compute="_compute_metrics")
+    report_scope_summary = fields.Char(compute="_compute_metrics")
+    comparison_scope_summary = fields.Char(compute="_compute_metrics")
     last_successful_sync_at = fields.Datetime(compute="_compute_metrics")
     last_sync_state = fields.Selection(
         [("success", "Success"), ("partial", "Partial"), ("failed", "Failed")],
         compute="_compute_metrics",
     )
     last_sync_message = fields.Text(compute="_compute_metrics")
+    sync_status_summary = fields.Text(compute="_compute_metrics")
     latest_sync_log_id = fields.Many2one("matomo.sync.log", compute="_compute_metrics")
     last_sync_warning_count = fields.Integer(compute="_compute_metrics")
     last_sync_warning_summary = fields.Char(compute="_compute_metrics")
@@ -72,6 +75,8 @@ class MatomoAnalyticsDashboard(models.TransientModel):
         for wizard in self:
             wizard.selected_range_label = ""
             wizard.compare_range_label = ""
+            wizard.report_scope_summary = ""
+            wizard.comparison_scope_summary = ""
             wizard.last_successful_sync_at = wizard.instance_id.last_successful_sync_at
             wizard.last_sync_state = wizard.instance_id.last_sync_state
             wizard.last_sync_message = wizard.instance_id.last_sync_message
@@ -80,6 +85,7 @@ class MatomoAnalyticsDashboard(models.TransientModel):
             wizard.last_sync_warning_summary = (
                 wizard.instance_id.last_sync_warning_summary
             )
+            wizard.sync_status_summary = wizard._build_sync_status_summary()
             wizard.total_visitors = 0
             wizard.total_sessions = 0
             wizard.total_conversions = 0
@@ -96,6 +102,9 @@ class MatomoAnalyticsDashboard(models.TransientModel):
                 continue
 
             wizard.selected_range_label = "%s - %s" % (wizard.date_from, wizard.date_to)
+            wizard.report_scope_summary = wizard.env._(
+                "Showing stored analytics for %s from %s to %s."
+            ) % (wizard.instance_id.name, wizard.date_from, wizard.date_to)
             current_domain = wizard._metric_domain(wizard.date_from, wizard.date_to)
             current_metrics = daily_metric_model.search(current_domain)
             wizard.total_visitors = int(sum(current_metrics.mapped("visitors")))
@@ -122,6 +131,9 @@ class MatomoAnalyticsDashboard(models.TransientModel):
                     wizard.compare_date_from,
                     wizard.compare_date_to,
                 )
+                wizard.comparison_scope_summary = wizard.env._(
+                    "Comparing against %s to %s."
+                ) % (wizard.compare_date_from, wizard.compare_date_to)
                 compare_domain = wizard._metric_domain(
                     wizard.compare_date_from, wizard.compare_date_to
                 )
@@ -198,26 +210,68 @@ class MatomoAnalyticsDashboard(models.TransientModel):
         self.ensure_one()
         return self.instance_id.action_open_latest_sync_log()
 
+    def action_open_daily_trend(self):
+        self.ensure_one()
+        return self._scoped_report_action(
+            "matomo_analytics.matomo_daily_metric_action",
+            self.env._("Daily Trend"),
+            search_defaults={"group_by_date": 1},
+        )
+
     def action_open_traffic_report(self):
         self.ensure_one()
-        action = self.env.ref("matomo_analytics.matomo_channel_metric_action").read()[0]
-        action["domain"] = self._metric_domain(self.date_from, self.date_to)
-        return action
+        return self._scoped_report_action(
+            "matomo_analytics.matomo_channel_metric_action",
+            self.env._("Traffic Channels"),
+            search_defaults={"group_by_channel": 1},
+        )
 
     def action_open_content_report(self):
         self.ensure_one()
-        action = self.env.ref("matomo_analytics.matomo_page_metric_action").read()[0]
-        action["domain"] = self._metric_domain(
+        return self._scoped_report_action(
+            "matomo_analytics.matomo_page_metric_action",
+            self.env._("Content Reporting"),
             self.date_from,
             self.date_to,
             extra=[("metric_type", "in", ["page", "landing", "exit"])],
+            search_defaults={"group_by_metric_type": 1},
         )
-        return action
 
     def action_open_conversion_report(self):
         self.ensure_one()
-        action = self.env.ref("matomo_analytics.matomo_goal_metric_action").read()[0]
-        action["domain"] = self._metric_domain(self.date_from, self.date_to)
+        return self._scoped_report_action(
+            "matomo_analytics.matomo_goal_metric_action",
+            self.env._("Goal Reporting"),
+            search_defaults={"group_by_goal": 1},
+        )
+
+    def _scoped_report_action(
+        self,
+        action_xmlid,
+        title,
+        date_from=None,
+        date_to=None,
+        extra=None,
+        search_defaults=None,
+    ):
+        self.ensure_one()
+        action = self.env.ref(action_xmlid).read()[0]
+        action["name"] = "%s (%s)" % (
+            title,
+            self.selected_range_label or self.env._("Current range"),
+        )
+        action["domain"] = self._metric_domain(
+            date_from or self.date_from,
+            date_to or self.date_to,
+            extra=extra,
+        )
+        context = action.get("context") or {}
+        if not isinstance(context, dict):
+            context = {}
+        context["search_default_instance_id"] = self.instance_id.id
+        for key, value in (search_defaults or {}).items():
+            context["search_default_%s" % key] = value
+        action["context"] = context
         return action
 
     def _metric_domain(self, date_from, date_to, extra=None):
@@ -243,3 +297,33 @@ class MatomoAnalyticsDashboard(models.TransientModel):
         return sum(
             metric.sessions * metric.bounce_rate for metric in metrics if metric.sessions
         ) / total_sessions
+
+    def _build_sync_status_summary(self):
+        self.ensure_one()
+        if not self.instance_id:
+            return ""
+        if not self.latest_sync_log_id:
+            return self.env._(
+                "No sync log is available yet. Run Sync Now before relying on these reports."
+            )
+        if self.last_sync_state == "success":
+            return self.env._(
+                "Last sync succeeded. The dashboard reflects the latest stored Matomo data for this connection."
+            )
+        if self.last_sync_state == "partial":
+            summary = self.env._(
+                "Last sync imported partial data. Review the latest sync log before interpreting missing report sections."
+            )
+            if self.last_sync_warning_count:
+                summary = "%s %s" % (
+                    summary,
+                    self.env._("Warnings: %s.") % self.last_sync_warning_count,
+                )
+            return summary
+        if self.last_sync_state == "failed":
+            return self.env._(
+                "Last sync failed. These reports only reflect the most recently stored data."
+            )
+        return self.env._(
+            "No completed sync has been recorded yet for this connection."
+        )

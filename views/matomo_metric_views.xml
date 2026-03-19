@@ -232,6 +232,8 @@
                 <filter name="filter_page" string="Top Pages" domain="[('metric_type', '=', 'page')]" />
                 <filter name="filter_landing" string="Landing Pages" domain="[('metric_type', '=', 'landing')]" />
                 <filter name="filter_exit" string="Exit Pages" domain="[('metric_type', '=', 'exit')]" />
+                <filter name="group_by_metric_type" string="Metric Type" context="{'group_by': 'metric_type'}" />
+                <filter name="group_by_date" string="Date" context="{'group_by': 'date'}" />
             </search>
         </field>
     </record>

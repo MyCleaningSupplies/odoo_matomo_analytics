@@ -9,6 +9,7 @@
                     <button name="action_refresh" type="object" string="Refresh" class="btn-primary" />
                     <button name="action_sync_now" type="object" string="Sync Now" groups="matomo_analytics.group_matomo_manager" />
                     <button name="action_open_latest_sync_log" type="object" string="Latest Sync Log" />
+                    <button name="action_open_daily_trend" type="object" string="Daily Trend" />
                     <button name="action_open_traffic_report" type="object" string="Traffic" />
                     <button name="action_open_content_report" type="object" string="Content" />
                     <button name="action_open_conversion_report" type="object" string="Conversions" />
@@ -30,6 +31,18 @@
                             <field name="last_sync_state" readonly="1" />
                             <field name="last_sync_warning_count" readonly="1" />
                         </group>
+                    </group>
+                    <group string="Viewing">
+                        <field name="report_scope_summary" readonly="1" nolabel="1" />
+                        <field
+                            name="comparison_scope_summary"
+                            readonly="1"
+                            nolabel="1"
+                            invisible="not comparison_enabled"
+                        />
+                    </group>
+                    <group string="Sync Guidance">
+                        <field name="sync_status_summary" readonly="1" nolabel="1" />
                     </group>
                     <group string="Last Sync Result">
                         <field name="last_sync_message" readonly="1" nolabel="1" />

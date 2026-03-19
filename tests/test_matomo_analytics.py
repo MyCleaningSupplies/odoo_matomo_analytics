@@ -488,3 +488,75 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
 
         action = wizard.action_open_latest_sync_log()
         self.assertEqual(action["res_id"], self.instance.latest_sync_log_id.id)
+
+    def test_dashboard_builds_readable_scope_and_sync_guidance(self):
+        today = fields.Date.context_today(self.instance)
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goals_unavailable,
+        ):
+            self.instance.action_sync_now()
+
+        wizard = self.env["matomo.analytics.dashboard"].create(
+            {
+                "instance_id": self.instance.id,
+                "date_from": today - timedelta(days=1),
+                "date_to": today,
+                "comparison_enabled": True,
+                "compare_date_from": today - timedelta(days=3),
+                "compare_date_to": today - timedelta(days=2),
+            }
+        )
+
+        self.assertIn("Main Site", wizard.report_scope_summary)
+        self.assertIn(str(today), wizard.report_scope_summary)
+        self.assertIn("Comparing against", wizard.comparison_scope_summary)
+        self.assertIn("partial data", wizard.sync_status_summary)
+        self.assertIn("Warnings: 4.", wizard.sync_status_summary)
+
+    def test_dashboard_report_actions_apply_current_scope(self):
+        today = fields.Date.context_today(self.instance)
+        wizard = self.env["matomo.analytics.dashboard"].create(
+            {
+                "instance_id": self.instance.id,
+                "date_from": today - timedelta(days=6),
+                "date_to": today - timedelta(days=1),
+            }
+        )
+
+        traffic_action = wizard.action_open_traffic_report()
+        self.assertIn(wizard.selected_range_label, traffic_action["name"])
+        self.assertEqual(
+            traffic_action["domain"],
+            [
+                ("instance_id", "=", self.instance.id),
+                ("date", ">=", today - timedelta(days=6)),
+                ("date", "<=", today - timedelta(days=1)),
+            ],
+        )
+        self.assertEqual(
+            traffic_action["context"]["search_default_group_by_channel"], 1
+        )
+
+        content_action = wizard.action_open_content_report()
+        self.assertEqual(
+            content_action["context"]["search_default_group_by_metric_type"], 1
+        )
+        self.assertIn(
+            ("metric_type", "in", ["page", "landing", "exit"]),
+            content_action["domain"],
+        )
+
+        daily_trend_action = wizard.action_open_daily_trend()
+        self.assertEqual(
+            daily_trend_action["context"]["search_default_group_by_date"], 1
+        )
+
+        conversion_action = wizard.action_open_conversion_report()
+        self.assertEqual(
+            conversion_action["context"]["search_default_group_by_goal"], 1
+        )
