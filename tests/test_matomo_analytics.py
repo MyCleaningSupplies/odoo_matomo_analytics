@@ -477,6 +477,7 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
                 "date_from": today - timedelta(days=1),
                 "date_to": today,
                 "comparison_enabled": True,
+                "comparison_mode": "custom",
                 "compare_date_from": today - timedelta(days=1),
                 "compare_date_to": today,
             }
@@ -485,9 +486,13 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertEqual(wizard.total_visitors, 20)
         self.assertEqual(wizard.total_sessions, 30)
         self.assertEqual(wizard.total_conversions, 6.0)
+        self.assertEqual(wizard.conversion_rate, 20.0)
         self.assertEqual(wizard.top_channel, "Direct Entry")
         self.assertEqual(wizard.compare_sessions, 30)
         self.assertEqual(wizard.sessions_delta, 0.0)
+        self.assertIn("Direct Entry", wizard.top_channels_summary)
+        self.assertIn("/home", wizard.top_pages_summary)
+        self.assertIn("Donation", wizard.top_goals_summary)
 
     def test_dashboard_weights_bounce_rate_by_sessions(self):
         weighted_instance = self.env["matomo.instance"].create(
@@ -546,18 +551,17 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         wizard = self.env["matomo.analytics.dashboard"].create(
             {
                 "instance_id": weighted_instance.id,
-                "date_from": today - timedelta(days=10),
-                "date_to": today - timedelta(days=9),
+                "date_from": today - timedelta(days=8),
+                "date_to": today - timedelta(days=7),
                 "comparison_enabled": True,
-                "compare_date_from": today - timedelta(days=8),
-                "compare_date_to": today - timedelta(days=7),
             }
         )
 
-        self.assertAlmostEqual(wizard.bounce_rate, (1000.0 + 90.0) / 101.0, places=4)
+        self.assertAlmostEqual(wizard.bounce_rate, (250.0 + 450.0) / 50.0, places=4)
         self.assertAlmostEqual(
-            wizard.compare_bounce_rate, (250.0 + 450.0) / 50.0, places=4
+            wizard.compare_bounce_rate, (1000.0 + 90.0) / 101.0, places=4
         )
+        self.assertIn("Previous period", wizard.compare_range_label)
 
     def test_dashboard_surfaces_last_sync_warning_context(self):
         today = fields.Date.context_today(self.instance)
@@ -587,6 +591,19 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         action = wizard.action_open_latest_sync_log()
         self.assertEqual(action["res_id"], self.instance.latest_sync_log_id.id)
 
+    def test_dashboard_applies_date_presets_on_create(self):
+        today = fields.Date.context_today(self.instance)
+        wizard = self.env["matomo.analytics.dashboard"].create(
+            {
+                "instance_id": self.instance.id,
+                "date_range_preset": "7d",
+            }
+        )
+
+        self.assertEqual(wizard.date_to, today)
+        self.assertEqual(wizard.date_from, today - timedelta(days=6))
+        self.assertIn("Last 7 days", wizard.selected_range_label)
+
     def test_dashboard_builds_readable_scope_and_sync_guidance(self):
         today = fields.Date.context_today(self.instance)
         with patch(
@@ -605,16 +622,16 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
                 "date_from": today - timedelta(days=1),
                 "date_to": today,
                 "comparison_enabled": True,
-                "compare_date_from": today - timedelta(days=3),
-                "compare_date_to": today - timedelta(days=2),
             }
         )
 
         self.assertIn("Main Site", wizard.report_scope_summary)
         self.assertIn(str(today), wizard.report_scope_summary)
-        self.assertIn("Comparing against", wizard.comparison_scope_summary)
+        self.assertIn("Comparison period", wizard.comparison_scope_summary)
         self.assertIn("partial data", wizard.sync_status_summary)
         self.assertIn("Warnings: 4.", wizard.sync_status_summary)
+        self.assertIn("current period", wizard.data_quality_summary)
+        self.assertIn("comparison period", wizard.data_quality_summary)
 
     def test_dashboard_report_actions_apply_current_scope(self):
         today = fields.Date.context_today(self.instance)
@@ -658,6 +675,20 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertEqual(
             conversion_action["context"]["search_default_group_by_goal"], 1
         )
+
+        country_action = wizard.action_open_country_report()
+        self.assertEqual(
+            country_action["context"]["search_default_group_by_country"], 1
+        )
+
+        referrer_action = wizard.action_open_referrer_report()
+        self.assertEqual(
+            referrer_action["context"]["search_default_group_by_referrer"], 1
+        )
+
+        top_pages_action = wizard.action_open_top_pages_report()
+        self.assertEqual(top_pages_action["context"]["search_default_filter_page"], 1)
+        self.assertIn(("metric_type", "=", "page"), top_pages_action["domain"])
 
     def test_dashboard_refresh_reloads_current_view(self):
         today = fields.Date.context_today(self.instance)

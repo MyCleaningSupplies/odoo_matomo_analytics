@@ -2,7 +2,7 @@
 <odoo>
     <menuitem id="menu_matomo_root" name="Matomo Analytics" sequence="10" groups="matomo_analytics.group_matomo_viewer" web_icon="matomo_analytics,static/description/icon.svg" />
 
-    <menuitem id="menu_matomo_dashboard" name="Overview" parent="menu_matomo_root" action="matomo_dashboard_server_action" sequence="10" groups="matomo_analytics.group_matomo_viewer" />
+    <menuitem id="menu_matomo_dashboard" name="Insights" parent="menu_matomo_root" action="matomo_dashboard_server_action" sequence="10" groups="matomo_analytics.group_matomo_viewer" />
 
     <menuitem id="menu_matomo_reporting_root" name="Reporting" parent="menu_matomo_root" sequence="20" groups="matomo_analytics.group_matomo_viewer" />
     <menuitem id="menu_matomo_daily_metric" name="Daily Trend" parent="menu_matomo_reporting_root" action="matomo_daily_metric_action" sequence="10" groups="matomo_analytics.group_matomo_viewer" />

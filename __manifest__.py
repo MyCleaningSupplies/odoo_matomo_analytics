@@ -1,7 +1,7 @@
 {
     "name": "Matomo Analytics",
     "summary": "Stored Matomo analytics reporting inside Odoo",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "author": "OpenAI",
     "website": "https://www.onestein.eu",
     "category": "Website/Analytics",

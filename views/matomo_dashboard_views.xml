@@ -4,83 +4,191 @@
         <field name="name">matomo.analytics.dashboard.form</field>
         <field name="model">matomo.analytics.dashboard</field>
         <field name="arch" type="xml">
-            <form string="Matomo Overview">
+            <form string="Matomo Insights">
                 <header>
                     <button name="action_refresh" type="object" string="Refresh" class="btn-primary" />
                     <button name="action_sync_now" type="object" string="Sync Now" groups="matomo_analytics.group_matomo_manager" />
                     <button name="action_open_latest_sync_log" type="object" string="Latest Sync Log" />
-                    <button name="action_open_daily_trend" type="object" string="Daily Trend" />
-                    <button name="action_open_traffic_report" type="object" string="Traffic" />
-                    <button name="action_open_content_report" type="object" string="Content" />
-                    <button name="action_open_conversion_report" type="object" string="Conversions" />
                 </header>
                 <sheet>
-                    <group>
-                        <group string="Filters">
-                            <field name="instance_id" options="{'no_create': True}" />
-                            <field name="date_from" />
-                            <field name="date_to" />
-                            <field name="comparison_enabled" />
-                            <field name="compare_date_from" invisible="not comparison_enabled" />
-                            <field name="compare_date_to" invisible="not comparison_enabled" />
-                        </group>
-                        <group string="Sync Status">
-                            <field name="selected_range_label" readonly="1" />
-                            <field name="compare_range_label" readonly="1" invisible="not comparison_enabled" />
-                            <field name="last_successful_sync_at" readonly="1" />
-                            <field name="last_sync_state" readonly="1" />
-                            <field name="last_sync_warning_count" readonly="1" />
-                        </group>
-                    </group>
-                    <group string="Viewing">
-                        <field name="report_scope_summary" readonly="1" nolabel="1" />
-                        <field
-                            name="comparison_scope_summary"
-                            readonly="1"
-                            nolabel="1"
-                            invisible="not comparison_enabled"
-                        />
-                    </group>
-                    <group string="Sync Guidance">
-                        <field name="sync_status_summary" readonly="1" nolabel="1" />
-                    </group>
-                    <group string="Last Sync Result">
-                        <field name="last_sync_message" readonly="1" nolabel="1" />
-                    </group>
-                    <group string="Last Sync Warnings" invisible="not last_sync_warning_count">
-                        <field name="last_sync_warning_summary" readonly="1" nolabel="1" />
-                    </group>
-                    <group string="Overview KPIs">
-                        <group>
-                            <field name="total_visitors" readonly="1" />
-                            <field name="total_sessions" readonly="1" />
-                            <field name="total_conversions" readonly="1" />
-                        </group>
-                        <group>
-                            <field name="bounce_rate" readonly="1" />
-                            <field name="top_channel" readonly="1" />
-                        </group>
-                    </group>
-                    <group string="Comparison" invisible="not comparison_enabled">
-                        <group>
-                            <field name="compare_visitors" readonly="1" />
-                            <field name="compare_sessions" readonly="1" />
-                            <field name="compare_conversions" readonly="1" />
-                            <field name="compare_bounce_rate" readonly="1" />
-                        </group>
-                        <group>
-                            <field name="visitors_delta" readonly="1" />
-                            <field name="sessions_delta" readonly="1" />
-                            <field name="conversions_delta" readonly="1" />
-                        </group>
-                    </group>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_open_daily_trend"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-users"
+                        >
+                            <field name="total_visitors" widget="statinfo" string="Visitors" />
+                        </button>
+                        <button
+                            name="action_open_daily_trend"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-line-chart"
+                        >
+                            <field name="total_sessions" widget="statinfo" string="Sessions" />
+                        </button>
+                        <button
+                            name="action_open_conversion_report"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-bullseye"
+                        >
+                            <field name="total_conversions" widget="statinfo" string="Conversions" />
+                        </button>
+                        <button
+                            name="action_open_daily_trend"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-percent"
+                        >
+                            <field name="bounce_rate" widget="statinfo" string="Bounce Rate" />
+                        </button>
+                    </div>
+
+                    <notebook>
+                        <page string="Overview">
+                            <group>
+                                <group string="Scope">
+                                    <field name="instance_id" options="{'no_create': True}" />
+                                    <field name="date_range_preset" />
+                                    <field name="date_from" />
+                                    <field name="date_to" />
+                                    <field name="comparison_enabled" />
+                                    <field name="comparison_mode" invisible="not comparison_enabled" />
+                                    <field
+                                        name="compare_date_from"
+                                        invisible="not comparison_enabled or comparison_mode != 'custom'"
+                                    />
+                                    <field
+                                        name="compare_date_to"
+                                        invisible="not comparison_enabled or comparison_mode != 'custom'"
+                                    />
+                                </group>
+                                <group string="At a Glance">
+                                    <field name="selected_range_label" readonly="1" />
+                                    <field name="compare_range_label" readonly="1" invisible="not comparison_enabled" />
+                                    <field name="conversion_rate" readonly="1" />
+                                    <field name="top_channel" readonly="1" />
+                                </group>
+                            </group>
+                            <group string="What Changed">
+                                <field name="change_summary" readonly="1" nolabel="1" widget="text" />
+                                <field name="next_step_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Comparison Snapshot" invisible="not comparison_enabled">
+                                <group string="Comparison">
+                                    <field name="compare_visitors" readonly="1" />
+                                    <field name="compare_sessions" readonly="1" />
+                                    <field name="compare_conversions" readonly="1" />
+                                    <field name="compare_bounce_rate" readonly="1" />
+                                    <field name="compare_conversion_rate" readonly="1" />
+                                </group>
+                                <group string="Delta">
+                                    <field name="visitors_delta" readonly="1" />
+                                    <field name="sessions_delta" readonly="1" />
+                                    <field name="conversions_delta" readonly="1" />
+                                    <field name="bounce_rate_delta" readonly="1" />
+                                    <field name="conversion_rate_delta" readonly="1" />
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Acquisition">
+                            <group>
+                                <group string="Open Reports" col="3">
+                                    <button name="action_open_traffic_report" type="object" string="Channels" class="btn-secondary" />
+                                    <button name="action_open_referrer_report" type="object" string="Referrers" class="btn-secondary" />
+                                    <button name="action_open_country_report" type="object" string="Countries" class="btn-secondary" />
+                                </group>
+                            </group>
+                            <group string="Top Channels">
+                                <field name="top_channels_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Top Referrers">
+                                <field name="top_referrers_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Top Countries">
+                                <field name="top_countries_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                        </page>
+                        <page string="Content">
+                            <group>
+                                <group string="Open Reports" col="4">
+                                    <button name="action_open_top_pages_report" type="object" string="Top Pages" class="btn-secondary" />
+                                    <button name="action_open_landing_page_report" type="object" string="Landing Pages" class="btn-secondary" />
+                                    <button name="action_open_exit_page_report" type="object" string="Exit Pages" class="btn-secondary" />
+                                    <button name="action_open_content_report" type="object" string="All Content" class="btn-secondary" />
+                                </group>
+                            </group>
+                            <group string="Top Pages">
+                                <field name="top_pages_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Top Landing Pages">
+                                <field name="top_landing_pages_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Top Exit Pages">
+                                <field name="top_exit_pages_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                        </page>
+                        <page string="Conversions">
+                            <group>
+                                <group string="Conversion Performance">
+                                    <field name="total_conversions" readonly="1" />
+                                    <field name="conversion_rate" readonly="1" />
+                                    <field name="compare_conversions" readonly="1" invisible="not comparison_enabled" />
+                                    <field name="compare_conversion_rate" readonly="1" invisible="not comparison_enabled" />
+                                    <field name="conversions_delta" readonly="1" invisible="not comparison_enabled" />
+                                    <field name="conversion_rate_delta" readonly="1" invisible="not comparison_enabled" />
+                                </group>
+                                <group string="Open Reports" col="2">
+                                    <button name="action_open_conversion_report" type="object" string="Goal Detail" class="btn-secondary" />
+                                    <button name="action_open_daily_trend" type="object" string="Daily Trend" class="btn-secondary" />
+                                </group>
+                            </group>
+                            <group string="Top Goals">
+                                <field name="top_goals_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                        </page>
+                        <page string="Data Quality">
+                            <group>
+                                <group string="Data Trust">
+                                    <field name="last_successful_sync_at" readonly="1" />
+                                    <field name="last_sync_state" readonly="1" />
+                                    <field name="latest_available_date" readonly="1" />
+                                    <field name="last_sync_warning_count" readonly="1" />
+                                    <field name="available_day_count" readonly="1" />
+                                    <field name="expected_day_count" readonly="1" />
+                                </group>
+                                <group string="Scope Summary">
+                                    <field name="report_scope_summary" readonly="1" nolabel="1" widget="text" />
+                                    <field
+                                        name="comparison_scope_summary"
+                                        readonly="1"
+                                        nolabel="1"
+                                        widget="text"
+                                        invisible="not comparison_enabled"
+                                    />
+                                </group>
+                            </group>
+                            <group string="Sync Guidance">
+                                <field name="sync_status_summary" readonly="1" nolabel="1" widget="text" />
+                                <field name="data_quality_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Last Sync Result">
+                                <field name="last_sync_message" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                            <group string="Warnings" invisible="not last_sync_warning_count">
+                                <field name="last_sync_warning_summary" readonly="1" nolabel="1" widget="text" />
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
     </record>
 
     <record id="matomo_dashboard_server_action" model="ir.actions.server">
-        <field name="name">Matomo Overview</field>
+        <field name="name">Matomo Insights</field>
         <field name="model_id" ref="model_matomo_analytics_dashboard" />
         <field name="state">code</field>
         <field name="code">action = model.action_open_dashboard()</field>
