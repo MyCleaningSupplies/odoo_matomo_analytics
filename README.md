@@ -2,18 +2,20 @@
 
 Standalone Odoo 18 addon for storing Matomo analytics data inside Odoo.
 
-## Local Dev Setup
+This repository is the canonical source of truth for the `matomo_analytics`
+product. The `addons-curq` monorepo is now an integration workspace only and
+must not be treated as the baseline for product behavior, release history, or
+documentation.
 
-This repository includes a minimal Docker-based dev environment so you can
-clone the addon on another machine and work on it without the larger CURQ
-monorepo.
+The validated prototype baseline is tagged as `v0.1.0`.
 
-### Prerequisites
+## Runtime
 
-- Docker
-- Docker Compose
+- Supported Odoo version: 18
+- Local runtime: Docker + Docker Compose
+- Default local URL: `http://localhost:8069`
 
-### First-Time Setup
+## Quickstart
 
 Clone the repository and enter it:
 
@@ -28,7 +30,7 @@ Create a local environment file:
 cp .env.example .env
 ```
 
-Start the containers:
+Start the local containers:
 
 ```bash
 make up
@@ -40,69 +42,57 @@ Create the development database and install the addon:
 make init
 ```
 
-Open Odoo at:
-
-```text
-http://localhost:8069
-```
-
-### Day-to-Day Commands
-
-Start or restart the local stack:
-
-```bash
-make up
-```
-
-Update the module after code changes:
+Update the addon after code changes:
 
 ```bash
 make update
 ```
 
-Run the addon tests in an isolated database:
+Run the automated addon tests:
 
 ```bash
 make test
 ```
 
-Follow the Odoo logs:
-
-```bash
-make logs
-```
-
-Open a shell in the Odoo container:
-
-```bash
-make shell
-```
-
-Stop the stack:
-
-```bash
-make down
-```
-
-Remove the stack and database volumes:
-
-```bash
-make clean
-```
-
-Validate the compose setup:
+Validate the Docker Compose setup:
 
 ```bash
 make config
 ```
 
+## Expected First-Run Flow
+
+1. Open `http://localhost:8069`
+2. Log in as admin
+3. Open `Matomo Analytics`
+4. Create a connection from `Configuration -> Connections`
+5. Run `Test Connection`
+6. Run `Sync Now`
+7. Open `Overview`
+8. Review `Sync Logs`
+
+## Day-to-Day Commands
+
+- `make up`: start or restart the local stack
+- `make init`: create the dev DB and install the addon
+- `make update`: reload Python/XML changes into the dev DB
+- `make test`: run addon tests in an isolated DB
+- `make logs`: follow Odoo logs
+- `make shell`: open a shell in the Odoo container
+- `make down`: stop the stack
+- `make clean`: stop the stack and remove volumes
+- `make config`: render and validate the Compose configuration
+
+## Documentation
+
+- [docs/operations.md](docs/operations.md): local setup, validation, and runtime operations
+- [docs/product-behavior.md](docs/product-behavior.md): product behavior and sync semantics
+- [docs/known-limitations.md](docs/known-limitations.md): current prototype limits
+- [docs/roadmap.md](docs/roadmap.md): next hardening work and integration policy
+
 ## Notes
 
-- The addon is mounted into the container from the working tree, so normal
-  code edits on your machine are immediately available to Odoo.
-- `make update` is the normal way to reload Python/XML changes into the dev
-  database.
-- `make test` runs the addon's Odoo tests with `--workers=0` to avoid the
-  worker-mode test issues seen in this environment.
-- Syncing against a real Matomo instance still requires valid Matomo
-  connection details and network access from the Odoo container.
+- The addon is mounted into the container from the working tree, so local code edits are immediately available to Odoo.
+- `make test` runs the addon's Odoo tests with `--workers=0` to avoid worker-mode test issues.
+- A Postgres dependency container may remain running after `make test`; this is expected Compose behavior.
+- Syncing against a real Matomo instance still requires valid Matomo credentials and network access from the Odoo container.
