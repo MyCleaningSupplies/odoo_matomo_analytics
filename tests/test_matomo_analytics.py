@@ -179,6 +179,11 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertEqual(log.warning_count, 4)
         self.assertIn("Goal summary unavailable", log.warning_details)
         self.assertEqual(self.instance.last_sync_state, "partial")
+        self.assertEqual(self.instance.latest_sync_log_id.id, log.id)
+        self.assertEqual(self.instance.last_sync_warning_count, 4)
+        self.assertIn(
+            "Goal summary unavailable", self.instance.last_sync_warning_summary
+        )
 
     def test_sync_marks_partial_when_bulk_sections_are_missing(self):
         with patch(
@@ -357,3 +362,31 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertAlmostEqual(
             wizard.compare_bounce_rate, (250.0 + 450.0) / 50.0, places=4
         )
+
+    def test_dashboard_surfaces_last_sync_warning_context(self):
+        today = fields.Date.context_today(self.instance)
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goals_unavailable,
+        ):
+            self.instance.action_sync_now()
+
+        wizard = self.env["matomo.analytics.dashboard"].create(
+            {
+                "instance_id": self.instance.id,
+                "date_from": today - timedelta(days=1),
+                "date_to": today,
+            }
+        )
+
+        self.assertEqual(wizard.last_sync_state, "partial")
+        self.assertEqual(wizard.last_sync_warning_count, 4)
+        self.assertIn("Goal summary unavailable", wizard.last_sync_warning_summary)
+        self.assertEqual(wizard.latest_sync_log_id, self.instance.latest_sync_log_id)
+
+        action = wizard.action_open_latest_sync_log()
+        self.assertEqual(action["res_id"], self.instance.latest_sync_log_id.id)

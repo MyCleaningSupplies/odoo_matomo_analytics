@@ -1,6 +1,6 @@
 import logging
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -55,8 +55,27 @@ class MatomoSyncLog(models.Model):
     page_records = fields.Integer(default=0)
     goal_records = fields.Integer(default=0)
     warning_count = fields.Integer(default=0)
+    warning_summary = fields.Char(compute="_compute_warning_summary")
     warning_details = fields.Text()
     message = fields.Text()
+
+    @api.depends("warning_count", "warning_details")
+    def _compute_warning_summary(self):
+        for record in self:
+            warnings = [
+                line.strip()
+                for line in (record.warning_details or "").splitlines()
+                if line.strip()
+            ]
+            if not warnings:
+                record.warning_summary = ""
+            elif len(warnings) == 1:
+                record.warning_summary = warnings[0]
+            else:
+                record.warning_summary = "%s (+%s more)" % (
+                    warnings[0],
+                    len(warnings) - 1,
+                )
 
     def _result_values(self, result):
         result = result or {}

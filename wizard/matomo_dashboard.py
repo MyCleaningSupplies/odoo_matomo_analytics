@@ -26,6 +26,14 @@ class MatomoAnalyticsDashboard(models.TransientModel):
     selected_range_label = fields.Char(compute="_compute_metrics")
     compare_range_label = fields.Char(compute="_compute_metrics")
     last_successful_sync_at = fields.Datetime(compute="_compute_metrics")
+    last_sync_state = fields.Selection(
+        [("success", "Success"), ("partial", "Partial"), ("failed", "Failed")],
+        compute="_compute_metrics",
+    )
+    last_sync_message = fields.Text(compute="_compute_metrics")
+    latest_sync_log_id = fields.Many2one("matomo.sync.log", compute="_compute_metrics")
+    last_sync_warning_count = fields.Integer(compute="_compute_metrics")
+    last_sync_warning_summary = fields.Char(compute="_compute_metrics")
     total_visitors = fields.Integer(compute="_compute_metrics")
     total_sessions = fields.Integer(compute="_compute_metrics")
     total_conversions = fields.Float(compute="_compute_metrics")
@@ -65,6 +73,13 @@ class MatomoAnalyticsDashboard(models.TransientModel):
             wizard.selected_range_label = ""
             wizard.compare_range_label = ""
             wizard.last_successful_sync_at = wizard.instance_id.last_successful_sync_at
+            wizard.last_sync_state = wizard.instance_id.last_sync_state
+            wizard.last_sync_message = wizard.instance_id.last_sync_message
+            wizard.latest_sync_log_id = wizard.instance_id.latest_sync_log_id
+            wizard.last_sync_warning_count = wizard.instance_id.last_sync_warning_count
+            wizard.last_sync_warning_summary = (
+                wizard.instance_id.last_sync_warning_summary
+            )
             wizard.total_visitors = 0
             wizard.total_sessions = 0
             wizard.total_conversions = 0
@@ -178,6 +193,10 @@ class MatomoAnalyticsDashboard(models.TransientModel):
     def action_sync_now(self):
         self.ensure_one()
         return self.instance_id.action_sync_now()
+
+    def action_open_latest_sync_log(self):
+        self.ensure_one()
+        return self.instance_id.action_open_latest_sync_log()
 
     def action_open_traffic_report(self):
         self.ensure_one()

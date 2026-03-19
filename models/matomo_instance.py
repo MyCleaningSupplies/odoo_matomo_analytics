@@ -47,6 +47,19 @@ class MatomoInstance(models.Model):
         readonly=True,
     )
     last_sync_message = fields.Text(readonly=True)
+    latest_sync_log_id = fields.Many2one(
+        "matomo.sync.log",
+        compute="_compute_last_sync_observability",
+        readonly=True,
+    )
+    last_sync_warning_count = fields.Integer(
+        compute="_compute_last_sync_observability",
+        readonly=True,
+    )
+    last_sync_warning_summary = fields.Char(
+        compute="_compute_last_sync_observability",
+        readonly=True,
+    )
     sync_log_ids = fields.One2many("matomo.sync.log", "instance_id")
     daily_metric_ids = fields.One2many("matomo.daily.metric", "instance_id")
     sync_log_count = fields.Integer(compute="_compute_counts")
@@ -84,6 +97,22 @@ class MatomoInstance(models.Model):
         for record in self:
             record.sync_log_count = len(record.sync_log_ids)
             record.daily_metric_count = len(record.daily_metric_ids)
+
+    @api.depends(
+        "sync_log_ids.started_at",
+        "sync_log_ids.warning_count",
+        "sync_log_ids.warning_summary",
+    )
+    def _compute_last_sync_observability(self):
+        for record in self:
+            latest_log = self.env["matomo.sync.log"].search(
+                [("instance_id", "=", record.id)],
+                order="started_at desc, id desc",
+                limit=1,
+            )
+            record.latest_sync_log_id = latest_log
+            record.last_sync_warning_count = latest_log.warning_count or 0
+            record.last_sync_warning_summary = latest_log.warning_summary or ""
 
     def action_test_connection(self):
         self.ensure_one()
@@ -177,6 +206,22 @@ class MatomoInstance(models.Model):
         action = self.env.ref("matomo_analytics.matomo_sync_log_action").read()[0]
         action["domain"] = [("instance_id", "=", self.id)]
         action["context"] = {"search_default_instance_id": self.id}
+        return action
+
+    def action_open_latest_sync_log(self):
+        self.ensure_one()
+        if not self.latest_sync_log_id:
+            return self.action_view_sync_logs()
+        action = self.env.ref("matomo_analytics.matomo_sync_log_action").read()[0]
+        action.update(
+            {
+                "view_mode": "form",
+                "views": [(False, "form")],
+                "res_id": self.latest_sync_log_id.id,
+                "domain": [],
+                "context": {},
+            }
+        )
         return action
 
     def action_open_dashboard(self):
