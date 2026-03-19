@@ -35,7 +35,7 @@ services:
       - --without-demo=all
       - --dev=reload,qweb,xml
       - --http-port=8069
-      - --longpolling-port=8072
+      - --gevent-port=8072
     tty: true
     stdin_open: true
 
