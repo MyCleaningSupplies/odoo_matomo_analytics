@@ -86,10 +86,7 @@ class MatomoAnalyticsDashboard(models.TransientModel):
             wizard.total_visitors = int(sum(current_metrics.mapped("visitors")))
             wizard.total_sessions = int(sum(current_metrics.mapped("sessions")))
             wizard.total_conversions = sum(current_metrics.mapped("conversions"))
-            if current_metrics:
-                wizard.bounce_rate = sum(current_metrics.mapped("bounce_rate")) / len(
-                    current_metrics
-                )
+            wizard.bounce_rate = wizard._weighted_bounce_rate(current_metrics)
             channel_groups = channel_metric_model.read_group(
                 current_domain,
                 ["sessions:sum"],
@@ -119,10 +116,9 @@ class MatomoAnalyticsDashboard(models.TransientModel):
                 wizard.compare_conversions = sum(
                     compare_metrics.mapped("conversions")
                 )
-                if compare_metrics:
-                    wizard.compare_bounce_rate = sum(
-                        compare_metrics.mapped("bounce_rate")
-                    ) / len(compare_metrics)
+                wizard.compare_bounce_rate = wizard._weighted_bounce_rate(
+                    compare_metrics
+                )
                 wizard.visitors_delta = wizard._delta_percent(
                     wizard.total_visitors, wizard.compare_visitors
                 )
@@ -220,3 +216,11 @@ class MatomoAnalyticsDashboard(models.TransientModel):
         if not compare_value:
             return 0.0
         return ((current_value - compare_value) / compare_value) * 100.0
+
+    def _weighted_bounce_rate(self, metrics):
+        total_sessions = sum(metrics.mapped("sessions"))
+        if not total_sessions:
+            return 0.0
+        return sum(
+            metric.sessions * metric.bounce_rate for metric in metrics if metric.sessions
+        ) / total_sessions
