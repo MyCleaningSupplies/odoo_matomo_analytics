@@ -303,8 +303,20 @@ class MatomoInstance(models.Model):
             apiAction="get",
             idGoal="all",
         )
+        normalized_goal_summary_warnings = []
+        normalized_goal_report_warnings = []
+        if not goal_summary_warnings:
+            goal_summary, normalized_goal_summary_warnings = (
+                self._normalize_goal_summary(goal_summary)
+            )
+        if not goal_report_warnings:
+            goal_report, normalized_goal_report_warnings = (
+                self._normalize_goal_report(goal_report)
+            )
         warnings.extend(goal_summary_warnings)
         warnings.extend(goal_report_warnings)
+        warnings.extend(normalized_goal_summary_warnings)
+        warnings.extend(normalized_goal_report_warnings)
         payload.update(
             {
                 "goal_summary": goal_summary,
@@ -531,6 +543,53 @@ class MatomoInstance(models.Model):
                     }
                 )
         return values
+
+    def _normalize_goal_summary(self, goal_summary):
+        if isinstance(goal_summary, dict):
+            if goal_summary:
+                return goal_summary, []
+            return {}, [self.env._("Goal summary report was empty.")]
+        if goal_summary in (None, False, ""):
+            return {}, [self.env._("Goal summary report was empty.")]
+        return {}, [
+            self.env._("Goal summary report had unexpected payload type %s.")
+            % type(goal_summary).__name__
+        ]
+
+    def _normalize_goal_report(self, goal_report):
+        if isinstance(goal_report, list):
+            if goal_report:
+                return goal_report, []
+            return [], [self.env._("Goal breakdown report was empty.")]
+        if isinstance(goal_report, dict):
+            row_keys = ("reportData", "report_data", "rows", "goals", "data")
+            if not goal_report:
+                return [], [self.env._("Goal breakdown report was empty.")]
+            for key in row_keys:
+                if key not in goal_report:
+                    continue
+                rows = goal_report.get(key)
+                if isinstance(rows, list):
+                    if rows:
+                        return rows, []
+                    return [], [self.env._("Goal breakdown report was empty.")]
+                if rows in (None, False, ""):
+                    return [], [self.env._("Goal breakdown report was empty.")]
+                return [], [
+                    self.env._(
+                        "Goal breakdown report had unexpected row payload type %s."
+                    )
+                    % type(rows).__name__
+                ]
+            return [], [
+                self.env._("Goal breakdown report had unexpected payload structure.")
+            ]
+        if goal_report in (None, False, ""):
+            return [], [self.env._("Goal breakdown report was empty.")]
+        return [], [
+            self.env._("Goal breakdown report had unexpected payload type %s.")
+            % type(goal_report).__name__
+        ]
 
     def _build_bulk_subrequest(self, method_name: str, metric_date: date, **extra):
         params = {

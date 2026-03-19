@@ -111,6 +111,26 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
             ]
         return TestMatomoAnalytics._fake_do_post(self, payload)
 
+    @staticmethod
+    def _fake_do_post_goal_payloads_empty(self, payload):
+        if payload["method"] == "Goals.get":
+            return {}
+        if payload["method"] == "API.getProcessedReport":
+            return {"reportData": []}
+        return TestMatomoAnalytics._fake_do_post(self, payload)
+
+    @staticmethod
+    def _fake_do_post_goal_breakdown_malformed(self, payload):
+        if payload["method"] == "API.getProcessedReport":
+            return {"reportData": "bad-goal-payload"}
+        return TestMatomoAnalytics._fake_do_post(self, payload)
+
+    @staticmethod
+    def _fake_do_post_goal_summary_malformed(self, payload):
+        if payload["method"] == "Goals.get":
+            return "bad-summary"
+        return TestMatomoAnalytics._fake_do_post(self, payload)
+
     def test_connection_action_marks_instance_tested(self):
         with patch(
             (
@@ -183,6 +203,84 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertEqual(self.instance.last_sync_warning_count, 4)
         self.assertIn(
             "Goal summary unavailable", self.instance.last_sync_warning_summary
+        )
+
+    def test_sync_marks_partial_when_goal_payloads_are_empty(self):
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goal_payloads_empty,
+        ):
+            action = self.instance.action_sync_now()
+
+        log = self.env["matomo.sync.log"].search(
+            [("instance_id", "=", self.instance.id)], limit=1
+        )
+        self.assertEqual(action["params"]["type"], "warning")
+        self.assertEqual(log.state, "partial")
+        self.assertEqual(log.goal_records, 0)
+        self.assertEqual(log.warning_count, 4)
+        self.assertIn("Goal summary report was empty.", log.warning_details)
+        self.assertIn("Goal breakdown report was empty.", log.warning_details)
+
+    def test_sync_falls_back_to_goal_summary_when_breakdown_is_malformed(self):
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goal_breakdown_malformed,
+        ):
+            action = self.instance.action_sync_now()
+
+        log = self.env["matomo.sync.log"].search(
+            [("instance_id", "=", self.instance.id)], limit=1
+        )
+        self.assertEqual(action["params"]["type"], "warning")
+        self.assertEqual(log.state, "partial")
+        self.assertEqual(log.goal_records, 2)
+        self.assertIn(
+            "Goal breakdown report had unexpected row payload type str.",
+            log.warning_details,
+        )
+        goal_metrics = self.env["matomo.goal.metric"].search(
+            [("instance_id", "=", self.instance.id)]
+        )
+        self.assertEqual(len(goal_metrics), 2)
+        self.assertEqual(set(goal_metrics.mapped("goal_name")), {"All Goals"})
+
+    def test_sync_marks_partial_when_goal_summary_is_malformed(self):
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goal_summary_malformed,
+        ):
+            action = self.instance.action_sync_now()
+
+        log = self.env["matomo.sync.log"].search(
+            [("instance_id", "=", self.instance.id)], limit=1
+        )
+        self.assertEqual(action["params"]["type"], "warning")
+        self.assertEqual(log.state, "partial")
+        self.assertEqual(log.goal_records, 4)
+        self.assertIn(
+            "Goal summary report had unexpected payload type str.",
+            log.warning_details,
+        )
+        self.assertEqual(
+            sum(
+                self.env["matomo.daily.metric"]
+                .search([("instance_id", "=", self.instance.id)])
+                .mapped("conversions")
+            ),
+            6.0,
         )
 
     def test_sync_marks_partial_when_bulk_sections_are_missing(self):
