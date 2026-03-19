@@ -300,8 +300,14 @@ class MatomoInstance(models.Model):
                 self._normalize_goal_summary(goal_summary)
             )
         if not goal_report_warnings:
+            allow_empty_goal_report = not self._metric_number(
+                goal_summary if isinstance(goal_summary, dict) else {},
+                "nb_conversions",
+            )
             goal_report, normalized_goal_report_warnings = (
-                self._normalize_goal_report(goal_report)
+                self._normalize_goal_report(
+                    goal_report, allow_empty=allow_empty_goal_report
+                )
             )
         warnings.extend(goal_summary_warnings)
         warnings.extend(goal_report_warnings)
@@ -546,14 +552,18 @@ class MatomoInstance(models.Model):
             % type(goal_summary).__name__
         ]
 
-    def _normalize_goal_report(self, goal_report):
+    def _normalize_goal_report(self, goal_report, allow_empty=False):
         if isinstance(goal_report, list):
             if goal_report:
                 return goal_report, []
+            if allow_empty:
+                return [], []
             return [], [self.env._("Goal breakdown report was empty.")]
         if isinstance(goal_report, dict):
             row_keys = ("reportData", "report_data", "rows", "goals", "data")
             if not goal_report:
+                if allow_empty:
+                    return [], []
                 return [], [self.env._("Goal breakdown report was empty.")]
             for key in row_keys:
                 if key not in goal_report:
@@ -562,8 +572,12 @@ class MatomoInstance(models.Model):
                 if isinstance(rows, list):
                     if rows:
                         return rows, []
+                    if allow_empty:
+                        return [], []
                     return [], [self.env._("Goal breakdown report was empty.")]
                 if rows in (None, False, ""):
+                    if allow_empty:
+                        return [], []
                     return [], [self.env._("Goal breakdown report was empty.")]
                 return [], [
                     self.env._(
@@ -575,6 +589,8 @@ class MatomoInstance(models.Model):
                 self.env._("Goal breakdown report had unexpected payload structure.")
             ]
         if goal_report in (None, False, ""):
+            if allow_empty:
+                return [], []
             return [], [self.env._("Goal breakdown report was empty.")]
         return [], [
             self.env._("Goal breakdown report had unexpected payload type %s.")
@@ -762,6 +778,14 @@ class MatomoInstance(models.Model):
             return default_value, [
                 self.env._("%s report failed: %s") % (label, message)
             ]
+        if expected_type is dict and isinstance(report, list):
+            normalized_report, normalized_warnings = self._normalize_summary_report(
+                report,
+                label,
+            )
+            if not normalized_warnings:
+                return normalized_report, []
+            return default_value, normalized_warnings
         if isinstance(report, expected_type):
             return report, []
         if report in (None, False, ""):
@@ -770,6 +794,29 @@ class MatomoInstance(models.Model):
             self.env._("%s report had unexpected payload type %s.")
             % (label, type(report).__name__)
         ]
+
+    def _normalize_summary_report(self, report, label):
+        if not report:
+            return {}, [self.env._("%s report was empty.") % label]
+        if len(report) == 1 and isinstance(report[0], dict):
+            return report[0], []
+        merged = {}
+        for row in report:
+            if not isinstance(row, dict):
+                return {}, [
+                    self.env._("%s report had unexpected payload type %s.")
+                    % (label, type(report).__name__)
+                ]
+            for key, value in row.items():
+                if isinstance(value, (int, float)) and isinstance(
+                    merged.get(key), (int, float)
+                ):
+                    merged[key] += value
+                elif key not in merged or merged[key] in (None, False, ""):
+                    merged[key] = value
+        if merged:
+            return merged, []
+        return {}, [self.env._("%s report was empty.") % label]
 
     def _safe_matomo_call(self, label: str, method_name: str, default_value, **params):
         try:
