@@ -292,17 +292,7 @@ class MatomoInstance(models.Model):
             include_site=True,
             idGoal="all",
         )
-        goal_report, goal_report_warnings = self._safe_matomo_call(
-            self.env._("Goal breakdown"),
-            "API.getProcessedReport",
-            {},
-            date=metric_date.isoformat(),
-            period="day",
-            include_site=True,
-            apiModule="Goals",
-            apiAction="get",
-            idGoal="all",
-        )
+        goal_report, goal_report_warnings = self._fetch_goal_breakdown(metric_date)
         normalized_goal_summary_warnings = []
         normalized_goal_report_warnings = []
         if not goal_summary_warnings:
@@ -590,6 +580,120 @@ class MatomoInstance(models.Model):
             self.env._("Goal breakdown report had unexpected payload type %s.")
             % type(goal_report).__name__
         ]
+
+    def _fetch_goal_breakdown(self, metric_date: date):
+        goal_report, goal_report_warnings = self._safe_matomo_call(
+            self.env._("Goal breakdown"),
+            "API.getProcessedReport",
+            {},
+            date=metric_date.isoformat(),
+            period="day",
+            include_site=True,
+            apiModule="Goals",
+            apiAction="get",
+            idGoal="all",
+        )
+        if not goal_report_warnings:
+            return goal_report, []
+
+        fallback_report, fallback_warnings, handled = (
+            self._fallback_goal_breakdown_from_goal_summaries(metric_date)
+        )
+        if handled:
+            return fallback_report, fallback_warnings
+        return goal_report, goal_report_warnings
+
+    def _fallback_goal_breakdown_from_goal_summaries(self, metric_date: date):
+        goal_definitions, goal_definition_warnings = self._safe_matomo_call(
+            self.env._("Goal definitions"),
+            "Goals.getGoals",
+            [],
+            include_site=True,
+        )
+        if goal_definition_warnings:
+            return [], goal_definition_warnings, False
+
+        goals = self._normalize_goal_definitions(goal_definitions)
+        if not goals:
+            return [], [], True
+
+        rows = []
+        warnings = []
+        for goal in goals:
+            goal_id = self._goal_definition_id(goal)
+            if goal_id is None:
+                continue
+            goal_name = self._goal_definition_name(goal)
+            goal_summary, goal_summary_warnings = self._safe_matomo_call(
+                self.env._("Goal breakdown"),
+                "Goals.get",
+                {},
+                date=metric_date.isoformat(),
+                period="day",
+                include_site=True,
+                idGoal=goal_id,
+            )
+            if goal_summary_warnings:
+                warnings.extend(goal_summary_warnings)
+                continue
+            goal_summary, normalized_warnings = self._normalize_goal_summary(
+                goal_summary
+            )
+            if normalized_warnings:
+                warnings.extend(normalized_warnings)
+                continue
+
+            conversions = self._metric_number(goal_summary, "nb_conversions")
+            revenue = self._metric_float(goal_summary, "revenue")
+            conversion_rate = self._metric_percent(goal_summary, "conversion_rate")
+            if not any((conversions, revenue, conversion_rate)):
+                continue
+            rows.append(
+                {
+                    "label": goal_name,
+                    "idsubdatatable": goal_id,
+                    "nb_conversions": conversions,
+                    "conversion_rate": conversion_rate,
+                    "revenue": revenue,
+                }
+            )
+        return rows, warnings, True
+
+    def _normalize_goal_definitions(self, goal_definitions):
+        if isinstance(goal_definitions, list):
+            return [goal for goal in goal_definitions if isinstance(goal, dict)]
+        if isinstance(goal_definitions, dict):
+            if isinstance(goal_definitions.get("goals"), list):
+                return [
+                    goal
+                    for goal in goal_definitions.get("goals", [])
+                    if isinstance(goal, dict)
+                ]
+            return [
+                goal
+                for goal in goal_definitions.values()
+                if isinstance(goal, dict)
+                and any(
+                    key in goal for key in ("idgoal", "idGoal", "id", "name", "label")
+                )
+            ]
+        return []
+
+    def _goal_definition_id(self, goal):
+        for key in ("idgoal", "idGoal", "id"):
+            value = goal.get(key)
+            if value in (None, False, ""):
+                continue
+            return value
+        return None
+
+    def _goal_definition_name(self, goal):
+        return (
+            goal.get("name")
+            or goal.get("label")
+            or goal.get("goalName")
+            or self.env._("Goal")
+        )
 
     def _build_bulk_subrequest(self, method_name: str, metric_date: date, **extra):
         params = {

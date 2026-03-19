@@ -28,6 +28,8 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
             return "5.1.0"
         if method == "SitesManager.getSiteFromId":
             return {"idsite": payload.get("idSite")}
+        if method == "Goals.getGoals":
+            return []
         if method == "Goals.get":
             return {"nb_conversions": 3, "conversion_rate": 20.0, "revenue": 25.0}
         if method == "API.getProcessedReport":
@@ -90,7 +92,7 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
 
     @staticmethod
     def _fake_do_post_goals_unavailable(self, payload):
-        if payload["method"] in ("Goals.get", "API.getProcessedReport"):
+        if payload["method"] in ("Goals.get", "API.getProcessedReport", "Goals.getGoals"):
             raise UserError("Goals are not enabled for this site.")
         return TestMatomoAnalytics._fake_do_post(self, payload)
 
@@ -129,6 +131,27 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
     def _fake_do_post_goal_summary_malformed(self, payload):
         if payload["method"] == "Goals.get":
             return "bad-summary"
+        return TestMatomoAnalytics._fake_do_post(self, payload)
+
+    @staticmethod
+    def _fake_do_post_goal_processed_report_unavailable(self, payload):
+        if payload["method"] == "API.getProcessedReport":
+            raise UserError(
+                "Requested report Goals.get for Website id=19 not found in the list of available reports."
+            )
+        if payload["method"] == "Goals.getGoals":
+            return [
+                {"idgoal": 1, "name": "Signup"},
+                {"idgoal": 2, "name": "Donation"},
+            ]
+        if payload["method"] == "Goals.get":
+            id_goal = payload.get("idGoal")
+            if id_goal == "all":
+                return {"nb_conversions": 3, "conversion_rate": 20.0, "revenue": 25.0}
+            if id_goal == 1:
+                return {"nb_conversions": 1, "conversion_rate": 5.0, "revenue": 0.0}
+            if id_goal == 2:
+                return {"nb_conversions": 2, "conversion_rate": 10.0, "revenue": 25.0}
         return TestMatomoAnalytics._fake_do_post(self, payload)
 
     def test_connection_action_marks_instance_tested(self):
@@ -282,6 +305,29 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
             ),
             6.0,
         )
+
+    def test_sync_falls_back_when_goal_processed_report_is_unavailable(self):
+        with patch(
+            (
+                "odoo.addons.matomo_analytics.models.matomo_instance."
+                "MatomoInstance._do_post"
+            ),
+            autospec=True,
+            side_effect=self._fake_do_post_goal_processed_report_unavailable,
+        ):
+            action = self.instance.action_sync_now()
+
+        log = self.env["matomo.sync.log"].search(
+            [("instance_id", "=", self.instance.id)], limit=1
+        )
+        self.assertEqual(action["params"]["type"], "success")
+        self.assertEqual(log.state, "success")
+        self.assertEqual(log.warning_count, 0)
+        self.assertEqual(log.goal_records, 4)
+        goal_metrics = self.env["matomo.goal.metric"].search(
+            [("instance_id", "=", self.instance.id)]
+        )
+        self.assertEqual(set(goal_metrics.mapped("goal_name")), {"Signup", "Donation"})
 
     def test_sync_marks_partial_when_bulk_sections_are_missing(self):
         with patch(
