@@ -165,7 +165,10 @@ class MatomoAnalyticsDashboard(models.TransientModel):
                 raise UserError(
                     self.env._("The comparison start date must be before the end date.")
                 )
-        return self.action_open_dashboard(instance=self.instance_id, wizard=self)
+        return {
+            "type": "ir.actions.client",
+            "tag": "reload",
+        }
 
     @api.model
     def action_open_dashboard(self, instance=None, wizard=None):

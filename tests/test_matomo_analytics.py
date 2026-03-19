@@ -658,3 +658,23 @@ class TestMatomoAnalytics(common.SingleTransactionCase):
         self.assertEqual(
             conversion_action["context"]["search_default_group_by_goal"], 1
         )
+
+    def test_dashboard_refresh_reloads_current_view(self):
+        today = fields.Date.context_today(self.instance)
+        wizard = self.env["matomo.analytics.dashboard"].create(
+            {
+                "instance_id": self.instance.id,
+                "date_from": today - timedelta(days=6),
+                "date_to": today - timedelta(days=1),
+            }
+        )
+
+        action = wizard.action_refresh()
+
+        self.assertEqual(
+            action,
+            {
+                "type": "ir.actions.client",
+                "tag": "reload",
+            },
+        )
